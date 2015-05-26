@@ -26,7 +26,6 @@ default:
         root: 'drupal'
       api_driver: 'drupal'
       region_map:
-        toolbar: '.tabs.primary'
         toolbar: ".tabs--primary"
         footer: "#footer"
         header: "#header"
