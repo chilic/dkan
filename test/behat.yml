@@ -7,6 +7,9 @@ default:
         - Drupal\DrupalExtension\Context\MinkContext
         - Drupal\DrupalExtension\Context\MessageContext
         - Drupal\DrupalExtension\Context\DrushContext
+      show_cmd: firefox %s
+  formatters:
+    pretty: true
   extensions:
     Behat\MinkExtension:
       goutte: ~
@@ -14,14 +17,22 @@ default:
       base_url: http://127.0.0.1:8888
       default_session: 'goutte'
       javascript_session: 'selenium2'
+      show_cmd: firefox %s
     Drupal\DrupalExtension:
       blackbox: ~
-      api_driver: 'drupal'
-      drush:
-        alias: @self
-      region_map:
-        toolbar: ".tabs.primary"
       drupal:
-        drupal_root: '../../../'
+        drupal_root: 'drupal'
+      drush: 
+        root: 'drupal'
+      api_driver: 'drupal'
+      region_map:
+        toolbar: '.tabs.primary'
+        toolbar: ".tabs--primary"
+        footer: "#footer"
+        header: "#header"
+        modal: "#modalContent"
+        left header: "#header-left"
+        right header: "#header-right"
+        right sidebar: "#column-right"        
       text:
-        log_out: "Log out"
+        log_out: 'Log out'
