@@ -1,14 +1,17 @@
 <?php
 
-use Drupal\DrupalExtension\Context\DrupalContext;
-use Behat\Behat\Context\Step\Given;
-use Symfony\Component\Process\Process;
+use Drupal\DrupalExtension\Context\RawDrupalContext;
+use Behat\Behat\Context\SnippetAcceptingContext;
+use Behat\Gherkin\Node\PyStringNode;
+use Behat\Gherkin\Node\TableNode;
+use WebDriver\Key;
 
-require 'vendor/autoload.php';
-
-class FeatureContext extends DrupalContext
+/**
+ * Defines application features from the specific context.
+ */
+class FeatureContext extends RawDrupalContext implements SnippetAcceptingContext
 {
-    
+
     /**
      * @Given /^I scroll to the top$/
      */
@@ -23,13 +26,23 @@ class FeatureContext extends DrupalContext
         $actions.perform();
       }
     }
-    
+
     /**
      * @Then /^I wait for the dialog box to appear$/
      */
     public function iWaitForTheDialogBoxToAppear()
     {
         $this->getSession()->wait(2000, "jQuery('#user-login-dialog').children().length > 0");
+    }
+
+    /**
+     * @Then the Dataset search updates behind the scenes
+     */
+    public function theDatasetSearchUpdatesBehindTheScenes()
+    {
+      $index = search_api_index_load('datasets');
+      $items =  search_api_get_items_to_index($index);
+      search_api_index_specific_items($index, $items);
     }
 
     /**
@@ -51,19 +64,21 @@ class FeatureContext extends DrupalContext
      * @Given /^I am a "([^"]*)" of the group "([^"]*)"$/
      */
     public function iAmAMemberOfTheGroup($role, $group_name) {
-      $this->assertDrushCommandWithArgument('php-eval', "\"return db_query('SELECT nid FROM node WHERE title = \'$group_name\'')->fetchField();\"");
-      $option = $this->readDrushOutput();
-      $gid = trim(str_replace(array("'"), "", $option));
-      $user = $this->user;
-      $this->assertDrushCommandWithArgument('php-eval', "\"return db_query('SELECT uid FROM users WHERE name = \'$user->name\'')->fetchField();\"");
-      $option = $this->readDrushOutput();
-      $user_id = trim(str_replace(array("'"), "", $option));
-      $this->assertDrushCommandWithArgument('php-eval', "\"return db_query('SELECT rid FROM og_role WHERE name = \'$role\'')->fetchField();\"");
-      $option = $this->readDrushOutput();
-      $rid = trim(str_replace(array("'"), "", $option));
-      $this->assertDrushCommandWithArgument('og-add-user',"node $gid $rid $user_id");
+      $nid = db_query('SELECT nid FROM node WHERE title = :group_name', array(':group_name' =>  $group_name))->fetchField();
+
+      if ($account = $this->getCurrentUser()) {
+        og_group('node', $nid, array(
+          "entity type" => "user",
+          "entity" => $account,
+          "membership type" => OG_MEMBERSHIP_TYPE_DEFAULT,
+        ));
+      }
+      else {
+        throw new \InvalidArgumentException(sprintf('Could not find current user'));
+      }
+
     }
-    
+
     /**
      * Properly inputs item in field rendered by Chosen.js.
      *
@@ -89,7 +104,7 @@ class FeatureContext extends DrupalContext
       );
       $title->click();
     }
-    
+
    /**
     * @Given /^I click the chosen field "([^"]*)" and enter "([^"]*)"$/
     */
@@ -113,7 +128,7 @@ class FeatureContext extends DrupalContext
 
       );
       $title->click();
-    }    
+    }
 
     /**
      * Click on map icon as identified by its z-index.
@@ -192,19 +207,20 @@ class FeatureContext extends DrupalContext
     }
 
     /**
-     * Determine if the a user is already logged in.
+     * Check toolbar if this->user isn't working.
      */
-    public function loggedIn() {
-      $session = $this->getSession();
-      $session->visit($this->locatePath('/'));
-      $driver = $this->getSession()->getDriver();
-      // Wait two seconds for admin menu if using js.
-      if ($driver instanceof Selenium2Driver) {
-          $session->wait(2000);
+    public function getCurrentUser() {
+      if ($this->user) {
+        return $this->user;
       }
-      // If a logout link is found, we are logged in. While not perfect, this is
-      // how Drupal SimpleTests currently work as well.
-      $element = $session->getPage();
-      return $element->findLink($this->getDrupalText('log_out'));
+      $session = $this->getSession();
+      $page = $session->getPage();
+      $xpath = $page->find('xpath', "//div[@class='content']/span[@class='links']/a[1]");
+      $userName = $xpath->getText();
+      $uid = db_query('SELECT uid FROM users WHERE name = :user_name', array(':user_name' =>  $userName))->fetchField();
+      if ($uid && $user = user_load($uid)) {
+        return $user;
+      }
+      return FALSE;
     }
 }
