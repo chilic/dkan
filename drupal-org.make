@@ -31,6 +31,9 @@ projects[colorizer][subdir] = contrib
 projects[diff][version] = 3.2
 projects[diff][subdir] = contrib
 
+projects[draggableviews][version] = 2.1
+projects[draggableviews][subdir] = contrib
+
 projects[imagecache_actions][download][type] = git
 projects[imagecache_actions][download][url] = "http://git.drupal.org/project/imagecache_actions.git"
 projects[imagecache_actions][download][branch] = 7.x-1.x
